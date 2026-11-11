@@ -1,7 +1,7 @@
 #!/bin/ash
 # shellcheck shell=dash
 
-# 引数を取得 (export or import)
+# Mode: export, import or import-dry-run
 MODE=$1
 
 # Export the database
