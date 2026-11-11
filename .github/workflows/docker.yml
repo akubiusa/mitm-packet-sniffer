@@ -1,5 +1,5 @@
-# 任意のレジストリに Docker image を公開orビルドする。
-# プルリクの作成・更新時に動作する。
+# Builds the Docker image via the reusable workflow from book000/templates and smoke-tests the compose stack.
+# Runs when a pull request is opened or updated.
 
 name: Docker
 
@@ -24,8 +24,7 @@ on:
       - closed
 
 concurrency:
-  # pull_request と pull_request_target が同一グループになると互いをキャンセルしてしまうため
-  # event_name を含めることで両イベントのキャンセルを独立させる
+  # Include event_name so that pull_request and pull_request_target runs do not cancel each other
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
@@ -33,7 +32,7 @@ jobs:
   post-approval-request:
     name: Post approval request
     runs-on: ubuntu-latest
-    # フォーク PR のときのみ承認リクエストを投稿する（closed は不要）
+    # Post the approval request only for fork PRs (not needed on closed)
     if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository && github.event.action != 'closed'
     continue-on-error: true
     permissions:
@@ -46,7 +45,7 @@ jobs:
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-author: github-actions[bot]
-          body-includes: Environment 承認待ち
+          body-includes: Waiting for Environment approval
 
       - name: Post or update approval request comment
         uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
@@ -55,19 +54,19 @@ jobs:
           issue-number: ${{ github.event.pull_request.number }}
           edit-mode: replace
           body: |
-            ## Environment 承認待ち
+            ## Waiting for Environment approval
 
-            この PR のビルドを実行するには、Environment `fork-pr-build` の承認が必要です。
+            Approval of the `fork-pr-build` Environment is required to run the build for this PR.
 
-            [Actions run を確認して承認してください](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}?pr=${{ github.event.pull_request.number }})
+            [Review the Actions run and approve it](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}?pr=${{ github.event.pull_request.number }})
 
   approval-gate:
     name: Approval gate
     runs-on: ubuntu-latest
     needs: post-approval-request
-    # post-approval-request の結果に関わらず常に実行する
+    # Always run, regardless of the post-approval-request result
     if: always()
-    # フォーク PR かつ closed でない場合のみ Environment で手動承認が必要
+    # Manual approval through the Environment is required only for fork PRs that are not closed
     environment: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository && github.event.action != 'closed' && 'fork-pr-build' || '' }}
     permissions: {}
     steps:
@@ -85,10 +84,9 @@ jobs:
           { imageName: "book000/mitm-packet-sniffer", context: "mitmproxy-addon", file: "mitmproxy-addon/Dockerfile", packageName: "mitm-packet-sniffer" }
         ]
       platforms: linux/amd64,linux/arm64
-      # pull_request_target 上のフォーク PR は、actions/checkout のセキュリティ制約により
-      # デフォルトでは head SHA をチェックアウトできない。フォーク PR は上の approval-gate で
-      # Environment（fork-pr-build）の手動承認を既に必須にしているため、承認済みの場合に限り
-      # チェックアウトを許可する。
+      # For fork PRs under pull_request_target, actions/checkout by default refuses to check out
+      # the head SHA for security reasons. Fork PRs already require manual approval of the
+      # fork-pr-build Environment in approval-gate above, so checkout is allowed only once approved.
       allow-unsafe-pr-checkout: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository }}
     secrets:
       DOCKER_USERNAME: ${{ github.actor }}

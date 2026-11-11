@@ -37,7 +37,7 @@ class Database:
         method = flow.request.method
         scheme = flow.request.scheme
         authority = flow.request.authority
-        # flow.request.path はクエリパラメータを含むため、パスのみを取得する
+        # flow.request.path includes the query string, so strip it to keep the path only
         path = flow.request.path
         if '?' in path:
             path = path[:path.index('?')]
@@ -65,11 +65,11 @@ class Database:
         sql = "SELECT `last_seen_at`, `next_check_phase` FROM `ignore_hosts` WHERE `address` = %s"
         row = await self.fetchone(sql, (address,))
 
-        # レコードが存在しない場合はFalse
+        # No record: the host is not ignored
         if row is None:
             return False
 
-        # レコードが存在する場合は、is_next_check メソッドの結果によって判定
+        # Record exists: the host stays ignored until is_next_check says its re-check time has come
         return not self.is_next_check(row[0], row[1])
 
     async def upsert_ignore_host(self, address: str):
@@ -102,16 +102,8 @@ class Database:
                 return await cur.fetchone()
 
     def is_next_check(self, last_seen_at: datetime.datetime, next_check_phase: int):
-        # 1回目: 1分後
-        # 2回目: 5分後
-        # 3回目: 30分後
-        # 4回目: 1時間後
-        # 5回目: 3時間後
-        # 6回目: 6時間後
-        # 7回目: 12時間後
-        # 8回目: 24時間後
-        # 9回目: 48時間後
-        # 10回目以降: 無制限
+        # Re-check interval per next_check_phase (1 = 1 minute ... 9 = 48 hours).
+        # Phases beyond 9 never expire, so the host stays ignored indefinitely.
         timedeltas = {
             1: datetime.timedelta(minutes=1),
             2: datetime.timedelta(minutes=5),
