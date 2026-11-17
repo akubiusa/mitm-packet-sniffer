@@ -41,7 +41,7 @@ services:
       PMA_USER: mitm-packet-sniffer
       PMA_PASSWORD: mitm-packet-sniffer-password
     ports:
-      - 8080:80
+      - 127.0.0.1:8080:80
     depends_on:
       - mysql
     networks:

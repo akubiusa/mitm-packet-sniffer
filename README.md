@@ -18,7 +18,9 @@ This starts:
 |---|---|---|
 | `mysql` | MySQL. The schema in `database/schema/` is loaded on first start. Data is kept in `./mysql`. | none |
 | `mitmproxy` | `mitmdump` with `mitmproxy-addon/main.py`. State (including the CA certificate) is kept in `./data`. | `10000` (proxy, `8080` in the container) |
-| `phpmyadmin` | Web UI for the database, pre-configured to log in as the application user. | `8080` |
+| `phpmyadmin` | Web UI for the database, pre-configured to log in as the application user. | `127.0.0.1:8080` |
+
+phpMyAdmin is bound to the Docker host's loopback interface by default in both Compose configurations. For remote administration, require explicit authentication or use an authenticated access layer before exposing it; changing the development password alone does not protect the automatic login.
 
 The database credentials in `compose.yaml` (`mitm-packet-sniffer` / `mitm-packet-sniffer-password`, root password `rootPassword`) are development defaults. Change them before exposing the stack to anything untrusted.
 
