@@ -6,11 +6,22 @@ MODE=$1
 
 # Export the database
 export_db() {
-  # Remove the old schema file
-  rm -f /schema/*.sql
+  # The temporary file must live in /schema so that mv is an atomic rename on the same filesystem
+  TMP_FILE=$(mktemp "/schema/.$DB_NAME.XXXXXX") || exit 1
+  trap 'rm -f "$TMP_FILE"' EXIT
 
-  # Export the database to a file
-  mysqldef -h "$DB_HOST" -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" --export > "/schema/$DB_NAME.sql"
+  if ! mysqldef -h "$DB_HOST" -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" --export > "$TMP_FILE"; then
+    echo "Schema export failed; keeping the previous schema file" >&2
+    exit 1
+  fi
+
+  if [ ! -s "$TMP_FILE" ]; then
+    echo "Schema export produced no output; keeping the previous schema file" >&2
+    exit 1
+  fi
+
+  chmod 644 "$TMP_FILE"
+  mv "$TMP_FILE" "/schema/$DB_NAME.sql"
 }
 
 # Import the database
