@@ -90,4 +90,4 @@ Export and import both join the default network of this Compose project, so they
 
 ## Development
 
-There is no test suite. CI (`.github/workflows/docker.yml`) builds the `mitmproxy-addon` image and runs a smoke test that starts the stack and fails if the `mitmproxy` container is not running or has restarted. See [`AGENTS.md`](AGENTS.md) for contributor guidance.
+There is no test suite. CI (`.github/workflows/docker.yml`) runs an unprivileged smoke test on every PR targeting `main` or `master`, checking out the explicit PR head SHA, building the image, and failing if the `mitmproxy` container is not running or has restarted. The `Docker CI / Check finished Docker CI` check also builds the PR head image for both `linux/amd64` and `linux/arm64` with read-only permissions and no publishing, preserving the existing required build check. Pushes to `main` or `master` smoke-test the pushed commit before publishing through the reusable Docker workflow at that same verified SHA. See [`AGENTS.md`](AGENTS.md) for contributor guidance.
