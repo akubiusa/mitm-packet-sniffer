@@ -13,6 +13,9 @@ from mitmproxy.utils import human
 
 
 class Database:
+    def __init__(self):
+        self.pool = None
+
     async def connect(self):
         self.pool = await aiomysql.create_pool(
             host=os.environ['DB_HOST'],
@@ -174,6 +177,8 @@ class Database:
         return base64.b64encode(content).decode('utf-8')
 
     def close(self):
+        if self.pool is None:
+            return
         self.pool.close()
 
 class Addon:
