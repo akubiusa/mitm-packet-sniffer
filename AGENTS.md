@@ -22,7 +22,7 @@ docker compose -f compose-export.yaml up      # dump the live schema to database
 docker compose -f compose-import.yaml up      # apply database/schema/*.sql to the DB (joins the project's default network, so the database must be running)
 ```
 
-There is no test suite, linter or build script. CI (`.github/workflows/docker.yml`) builds the image with the reusable workflow from `book000/templates` and runs a smoke test that starts `docker compose up` and fails if the `mitmproxy` container is not running or has restarted. Fork PRs need manual approval of the `fork-pr-build` Environment.
+There is no test suite, linter or build script. CI (`.github/workflows/docker.yml`) runs an unprivileged smoke test against the explicit PR head revision for PRs targeting `main` or `master`. The smoke test starts `docker compose up` and fails if the `mitmproxy` container is not running or has restarted. Pushes to `main` or `master` run the same smoke test against the pushed revision, then build and release that verified revision with the reusable workflow from `book000/templates`.
 
 ## Structure
 
